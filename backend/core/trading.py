@@ -88,13 +88,27 @@ class TradingEngine:
             
     def get_positions(self) -> List[Dict]:
         """Get current positions"""
-        return self.client.get_positions()
+        try:
+            positions = self.client.get_positions() or []
+            logger.debug(f"Retrieved positions: {positions}")
+            return positions
+        except Exception as e:
+            logger.error(f"Error getting positions: {e}")
+            return []
         
     def get_pnl(self) -> Dict:
         """Get current P&L"""
-        positions = self.get_positions()
-        total_pnl = sum(float(pos.get("pnl", 0)) for pos in positions)
-        return {
-            "total_pnl": total_pnl,
-            "timestamp": datetime.now().isoformat()
-        }
+        try:
+            positions = self.get_positions()
+            total_pnl = sum(float(pos.get("pnl", 0)) for pos in positions if pos.get("pnl") is not None)
+            return {
+                "total_pnl": total_pnl,
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Error calculating P&L: {e}")
+            return {
+                "total_pnl": 0.0,
+                "timestamp": datetime.now().isoformat(),
+                "error": str(e)
+            }

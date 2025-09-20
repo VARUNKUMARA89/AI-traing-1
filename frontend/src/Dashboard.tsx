@@ -12,6 +12,7 @@ import {
   InputLabel,
 } from '@mui/material';
 import axios from 'axios';
+import { API_BASE_URL } from './config/api';
 import {
   LineChart,
   Line,
@@ -47,8 +48,8 @@ const Dashboard: React.FC = () => {
     const fetchData = async () => {
       try {
         const [positionsRes, pnlRes] = await Promise.all([
-          axios.get('/api/positions'),
-          axios.get('/api/pnl'),
+          axios.get(`${API_BASE_URL}/api/positions`),
+          axios.get(`${API_BASE_URL}/api/pnl`),
         ]);
         setPositions(positionsRes.data);
         setPnL(pnlRes.data);
@@ -65,7 +66,7 @@ const Dashboard: React.FC = () => {
   const handleTrading = async () => {
     try {
       const endpoint = isTrading ? '/api/stop' : '/api/start';
-      await axios.post(endpoint);
+      await axios.post(`${API_BASE_URL}${endpoint}`);
       setIsTrading(!isTrading);
     } catch (error) {
       console.error('Error toggling trading:', error);
