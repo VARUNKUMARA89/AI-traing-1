@@ -35,6 +35,8 @@ interface Position {
 interface PnL {
   total_pnl: number;
   timestamp: string;
+  positions_count: number;
+  error?: string;
 }
 
 const Dashboard: React.FC = () => {

@@ -89,9 +89,31 @@ class TradingEngine:
     def get_positions(self) -> List[Dict]:
         """Get current positions"""
         try:
-            positions = self.client.get_positions() or []
-            logger.debug(f"Retrieved positions: {positions}")
-            return positions
+            response = self.client.get_positions()
+            logger.debug(f"Raw positions response: {response}")
+            
+            # Convert response to list if it's not already
+            if isinstance(response, str):
+                # Handle empty or error response
+                if "No positions" in response:
+                    return []
+                logger.warning(f"Unexpected string response: {response}")
+                return []
+                
+            # If response is a dictionary, check for positions data
+            if isinstance(response, dict):
+                positions = response.get("positions", [])
+                if isinstance(positions, list):
+                    return positions
+                return []
+                
+            # If response is already a list
+            if isinstance(response, list):
+                return response
+                
+            logger.warning(f"Unexpected response type: {type(response)}")
+            return []
+            
         except Exception as e:
             logger.error(f"Error getting positions: {e}")
             return []
@@ -100,15 +122,44 @@ class TradingEngine:
         """Get current P&L"""
         try:
             positions = self.get_positions()
-            total_pnl = sum(float(pos.get("pnl", 0)) for pos in positions if pos.get("pnl") is not None)
+            
+            if not positions:
+                return {
+                    "total_pnl": 0.0,
+                    "timestamp": datetime.now().isoformat(),
+                    "positions_count": 0
+                }
+            
+            total_pnl = 0.0
+            for position in positions:
+                # Try different possible PNL field names
+                pnl = position.get("pnl", 
+                      position.get("unrealizedPnL",
+                      position.get("realizedPnL", 0)))
+                
+                if isinstance(pnl, str):
+                    try:
+                        pnl = float(pnl.replace(',', ''))
+                    except (ValueError, AttributeError):
+                        pnl = 0.0
+                elif isinstance(pnl, (int, float)):
+                    pnl = float(pnl)
+                else:
+                    pnl = 0.0
+                    
+                total_pnl += pnl
+            
             return {
                 "total_pnl": total_pnl,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
+                "positions_count": len(positions)
             }
+            
         except Exception as e:
             logger.error(f"Error calculating P&L: {e}")
             return {
                 "total_pnl": 0.0,
                 "timestamp": datetime.now().isoformat(),
-                "error": str(e)
+                "error": str(e),
+                "positions_count": 0
             }
